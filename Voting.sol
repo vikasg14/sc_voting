@@ -41,7 +41,6 @@ contract Voting {
 
     uint256 private constant NQUESTIONTYPES = 5; // ???
     uint256 private constant MAX_WEIGHT = 100; // ???
-    string private constant DELIMITER = ";;"; // ???
 
     address public immutable owner;         // ???
     uint256 private optionIdCounter = 0;
