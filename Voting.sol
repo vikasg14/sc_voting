@@ -39,18 +39,22 @@ contract Voting {
     uint256 public totalVotes = 0;
     uint256 public totalVoters = 0;
 
-    uint256 private nQuestionTypes = 5; // ???
-    // uint256 private MAX_OPTIONS = 5;
-    uint256 private MAX_WEIGHT = 100; // ???
-    string private DELIMITER = ";;"; // ???
+    uint256 private constant NQUESTIONTYPES = 5; // ???
+    uint256 private constant MAX_WEIGHT = 100; // ???
+    string private constant DELIMITER = ";;"; // ???
 
-    address public owner;
+    address public immutable owner;         // ???
+    uint256 private optionIdCounter = 0;
 
     // map (address => map(questionId => UserVote))
     mapping(address => mapping(uint256 => UserVote)) public mapUserVotes;
 
     // map(questionId => Question)
     mapping(uint256 => Question) public mapQuestions;
+
+    constructor() {
+        owner = msg.sender;
+    }
 
     // Modifiers
     modifier onlyOwner() {
@@ -75,12 +79,6 @@ contract Voting {
         _;
     }
 
-    constructor() {
-        owner = msg.sender;
-    }
-
-    uint256 private optionIdCounter = 0;
-
     function addQuestion(
         uint256 _qtype,
         string memory _qStatement,
@@ -91,7 +89,7 @@ contract Voting {
         string memory _option5
     ) public onlyOwner {
         require(
-            _qtype > 0 && _qtype <= nQuestionTypes,
+            _qtype > 0 && _qtype <= NQUESTIONTYPES,
             "Invalid question type."
         );
 
