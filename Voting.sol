@@ -7,7 +7,7 @@ contract Voting {
         uint256 questionId;
         uint256 questionType;
         Status status;
-        string questionStatement;
+        string questionStatement; // ???
         uint256 optionCount;
         Option[] options;
         uint256 qVotes;
@@ -20,36 +20,43 @@ contract Voting {
         uint256 weightedVotes;
     }
 
+    struct User {
+        uint256 userId;
+        address userAddress;
+        uint256 weight;
+    }
+
     struct UserVote {
         address userAddress;
         uint256 questionId;
         uint256 optionId;
         uint256 voteWeight;
-        bool voted;
     }
 
     enum Status {
         New,
         Active,
         Inactive,
-        Deleted
+        Deleted // ???
     }
 
     uint256 public totalQuestions = 0;
     uint256 public totalVotes = 0;
     uint256 public totalVoters = 0;
 
-    uint256 private constant NQUESTIONTYPES = 5; // ???
+    uint256 private constant N_QUESTION_TYPES = 5; // ???
     uint256 private constant MAX_WEIGHT = 100; // ???
 
-    address public immutable owner;         // ???
+    address public owner;
     uint256 private optionIdCounter = 0;
 
-    // map (address => map(questionId => UserVote))
-    mapping(address => mapping(uint256 => UserVote)) public mapUserVotes;
+    mapping(address => User) public mapUsers;
 
     // map(questionId => Question)
     mapping(uint256 => Question) public mapQuestions;
+
+    // map (address => map(questionId => UserVote))
+    mapping(address => mapping(uint256 => UserVote)) public mapUserVotes;
 
     constructor() {
         owner = msg.sender;
@@ -88,7 +95,7 @@ contract Voting {
         string memory _option5
     ) public onlyOwner {
         require(
-            _qtype > 0 && _qtype <= NQUESTIONTYPES,
+            _qtype > 0 && _qtype <= N_QUESTION_TYPES,
             "Invalid question type."
         );
 
@@ -128,12 +135,9 @@ contract Voting {
         mapQuestions[_qid].status = Status.Active;
     }
 
-    function disableQuestion(uint256 _qid)      // ??? want to enable it again?
-        public
-        onlyOwner
-        validQuestion(_qid)
-        inStatus(_qid, Status.Active)
-    {
+    function disableQuestion(
+        uint256 _qid // ??? want to enable it again?
+    ) public onlyOwner validQuestion(_qid) inStatus(_qid, Status.Active) {
         mapQuestions[_qid].status = Status.Inactive;
     }
 
@@ -152,28 +156,35 @@ contract Voting {
             "Invalid vote weight."
         );
         require(
-            mapUserVotes[_userAddress][_qid].voted == false,
+            mapUserVotes[_userAddress][_qid].optionId == 0,
             "User already voted."
         );
 
-        // ???
-        // if (!mapUserVotes[_userAddress]) {
-        //     totalVoters++;
-        // }
+        if (mapUsers[_userAddress].userId == 0) {
+            User memory user;
+            user.userId = ++totalVoters;
+            user.userAddress = _userAddress;
+            user.weight = _voteWeight;
+            mapUsers[_userAddress] = user;
+        }
 
         UserVote memory userVote;
         userVote.userAddress = _userAddress;
         userVote.questionId = _qid;
         userVote.optionId = _optionId;
         userVote.voteWeight = _voteWeight;
-        userVote.voted = true;
         mapUserVotes[_userAddress][_qid] = userVote;
 
         Question storage quest = mapQuestions[_qid];
         quest.qVotes += 1;
         quest.options[_optionId - 1].oVotes += 1;
-        quest.options[_optionId - 1].weightedVotes += _voteWeight;           // ???
+        quest.options[_optionId - 1].weightedVotes += _voteWeight; // ???
 
         totalVotes++;
+    }
+
+    function transferOwnership(address _newOwner) public onlyOwner {
+        require(_newOwner != address(0), "Invalid address");
+        owner = _newOwner;
     }
 }
