@@ -5,25 +5,25 @@ pragma solidity ^0.8.0;
 contract Voting {
     struct Question {
         uint256 questionId;
-        uint256 questionType;
+        uint256 questionCategory;
         Status status;
-        string questionStatement; // ???
+        string questionStatement;
         uint256 optionCount;
         Option[] options;
-        uint256 qVotes;
+        uint256 qTotalVotes;
     }
 
     struct Option {
         uint256 optionId;
         string optionValue;
-        uint256 oVotes;
-        uint256 weightedVotes;
+        uint256 oTotalVotes;
+        uint256 oWeightedTotalVotes;
     }
 
     struct User {
         uint256 userId;
         address userAddress;
-        uint256 weight;
+        uint256 uWeight;
     }
 
     struct UserVote {
@@ -35,17 +35,16 @@ contract Voting {
 
     enum Status {
         New,
-        Active,
-        Inactive,
-        Deleted // ???
+        Open,
+        Closed
     }
 
     uint256 public totalQuestions = 0;
     uint256 public totalVotes = 0;
     uint256 public totalVoters = 0;
 
-    uint256 private constant N_QUESTION_TYPES = 5; // ???
-    uint256 private constant MAX_WEIGHT = 100; // ???
+    uint256 private constant N_QUESTION_CATEGORIES = 10;
+    uint256 private constant MAX_WEIGHT = 100;
 
     address public owner;
     uint256 private optionIdCounter = 0;
@@ -86,7 +85,7 @@ contract Voting {
     }
 
     function addQuestion(
-        uint256 _qtype,
+        uint256 _qcategory,
         string memory _qStatement,
         string memory _option1,
         string memory _option2,
@@ -95,8 +94,8 @@ contract Voting {
         string memory _option5
     ) public onlyOwner {
         require(
-            _qtype > 0 && _qtype <= N_QUESTION_TYPES,
-            "Invalid question type."
+            _qcategory > 0 && _qcategory <= N_QUESTION_CATEGORIES,
+            "Invalid question category."
         );
 
         require(bytes(_qStatement).length != 0, "Invalid question statement.");
@@ -105,7 +104,7 @@ contract Voting {
 
         Question storage quest = mapQuestions[++totalQuestions];
         quest.questionId = totalQuestions;
-        quest.questionType = _qtype;
+        quest.questionCategory = _qcategory;
         quest.status = Status.New;
         quest.questionStatement = _qStatement;
         quest.options.push(Option(1, _option1, 0, 0));
@@ -126,19 +125,22 @@ contract Voting {
         quest.optionCount = optionIdCounter;
     }
 
-    function enableQuestion(uint256 _qid)
+    function enableQuestion(uint256 _qid) public onlyOwner validQuestion(_qid) {
+        require(
+            (mapQuestions[_qid].status == Status.New ||
+                mapQuestions[_qid].status == Status.Closed),
+            "Operation not valid, invalid question status."
+        );
+        mapQuestions[_qid].status = Status.Open;
+    }
+
+    function disableQuestion(uint256 _qid)
         public
         onlyOwner
         validQuestion(_qid)
-        inStatus(_qid, Status.New)
+        inStatus(_qid, Status.Open)
     {
-        mapQuestions[_qid].status = Status.Active;
-    }
-
-    function disableQuestion(
-        uint256 _qid // ??? want to enable it again?
-    ) public onlyOwner validQuestion(_qid) inStatus(_qid, Status.Active) {
-        mapQuestions[_qid].status = Status.Inactive;
+        mapQuestions[_qid].status = Status.Closed;
     }
 
     function vote(
@@ -146,7 +148,7 @@ contract Voting {
         uint256 _qid,
         uint256 _optionId,
         uint256 _voteWeight
-    ) public validQuestion(_qid) inStatus(_qid, Status.Active) {
+    ) public validQuestion(_qid) inStatus(_qid, Status.Open) {
         require(
             _optionId > 0 && _optionId <= mapQuestions[_qid].optionCount,
             "Invalid option choosen."
@@ -164,7 +166,7 @@ contract Voting {
             User memory user;
             user.userId = ++totalVoters;
             user.userAddress = _userAddress;
-            user.weight = _voteWeight;
+            user.uWeight = _voteWeight;
             mapUsers[_userAddress] = user;
         }
 
@@ -176,9 +178,9 @@ contract Voting {
         mapUserVotes[_userAddress][_qid] = userVote;
 
         Question storage quest = mapQuestions[_qid];
-        quest.qVotes += 1;
-        quest.options[_optionId - 1].oVotes += 1;
-        quest.options[_optionId - 1].weightedVotes += _voteWeight; // ???
+        quest.qTotalVotes += 1;
+        quest.options[_optionId - 1].oTotalVotes += 1;
+        quest.options[_optionId - 1].oWeightedTotalVotes += _voteWeight;
 
         totalVotes++;
     }
