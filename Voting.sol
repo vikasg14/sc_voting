@@ -57,6 +57,7 @@ contract Voting {
     // map (address => map(questionId => UserVote))
     mapping(address => mapping(uint256 => UserVote)) public mapUserVotes;
 
+    // Constructor
     constructor() {
         owner = msg.sender;
     }
@@ -84,6 +85,15 @@ contract Voting {
         _;
     }
 
+    // Events
+    event EUserVote(
+        address userAddress,
+        uint256 questionId,
+        uint256 optionId,
+        uint256 voteWeight
+    );
+
+    // Functions
     function addQuestion(
         uint256 _qcategory,
         string memory _qStatement,
@@ -183,6 +193,8 @@ contract Voting {
         quest.options[_optionId - 1].oWeightedTotalVotes += _voteWeight;
 
         totalVotes++;
+
+        emit EUserVote(_userAddress, _qid, _optionId, _voteWeight);
     }
 
     function transferOwnership(address _newOwner) public onlyOwner {
