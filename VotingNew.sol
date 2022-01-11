@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: GPL-3.0
+// SPDX-License-Identifier: MIT
 
 pragma solidity ^0.8.0;
 
@@ -9,11 +9,6 @@ contract Voting {
         uint256 optionCount;
     }
 
-    struct User {
-        uint256 userId;
-        address userAddress;
-    }
-
     enum Status {
         New,
         Open,
@@ -21,7 +16,6 @@ contract Voting {
     }
 
     uint256 private constant N_QUESTION_CATEGORIES = 10;
-    uint256 private constant MAX_WEIGHT = 100;
 
     uint256 public totalQuestions;
     uint256 public totalVotes;
@@ -29,7 +23,6 @@ contract Voting {
     address public owner;
     uint256 private optionIdCounter;
 
-    mapping(address => User) public mapUsers;
     mapping(uint256 => Question) public mapQuestions; // map(questionId => Question)
     mapping(address => mapping(uint256 => bool)) public mapUserVotes; // map(address => map(questionId => voted))
 
@@ -67,7 +60,7 @@ contract Voting {
         uint256 questionCategory,
         uint256 questionStatusId,
         string questionStatement,
-        uint256 optionCount, // ???
+        uint256 optionCount,
         string option1,
         string option2,
         string option3,
@@ -77,12 +70,7 @@ contract Voting {
 
     event EQuestionStatus(uint256 questionId, uint256 questionStatusId);
 
-    event EUserVote(
-        address userAddress,
-        uint256 questionId,
-        uint256 optionId,
-        uint256 voteWeight
-    );
+    event EUserVote(address userAddress, uint256 questionId, uint256 optionId);
 
     // Functions
     function addQuestion(
@@ -159,36 +147,21 @@ contract Voting {
         emit EQuestionStatus(_qid, uint256(Status.Closed));
     }
 
-    function vote(
-        address _userAddress,
-        uint256 _qid,
-        uint256 _optionId,
-        uint256 _voteWeight
-    ) external validQuestion(_qid) inStatus(_qid, Status.Open) {
+    function vote(uint256 _qid, uint256 _optionId)
+        external
+        validQuestion(_qid)
+        inStatus(_qid, Status.Open)
+    {
         require(
             _optionId > 0 && _optionId <= mapQuestions[_qid].optionCount,
             "Invalid option choosen."
         );
-        require(
-            _voteWeight > 0 && _voteWeight <= MAX_WEIGHT,
-            "Invalid vote weight."
-        );
-        require(
-            mapUserVotes[_userAddress][_qid] == false,
-            "User already voted."
-        );
+        require(mapUserVotes[msg.sender][_qid] == false, "User already voted.");
 
-        if (mapUsers[_userAddress].userId == 0) {
-            User memory user;
-            user.userId = ++totalVoters;
-            user.userAddress = _userAddress;
-            mapUsers[_userAddress] = user;
-        }
-
-        mapUserVotes[_userAddress][_qid] = true;
+        mapUserVotes[msg.sender][_qid] = true;
         totalVotes++;
 
-        emit EUserVote(_userAddress, _qid, _optionId, _voteWeight);
+        emit EUserVote(msg.sender, _qid, _optionId);
     }
 
     function transferOwnership(address _newOwner) public onlyOwner {
