@@ -21,7 +21,6 @@ contract Voting {
     uint256 public totalVotes;
     uint256 public totalVoters;
     address public owner;
-    uint256 private optionIdCounter;
 
     mapping(uint256 => Question) public mapQuestions; // map(questionId => Question)
     mapping(address => mapping(uint256 => bool)) public mapUserVotes; // map(address => map(questionId => voted))
@@ -39,10 +38,9 @@ contract Voting {
 
     modifier validQuestion(uint256 _qid) {
         require(
-            _qid > 0 && _qid <= totalQuestions,
+            _qid > 0 && mapQuestions[_qid].questionId > 0,
             "Question does not exists."
         );
-        require(mapQuestions[_qid].questionId > 0, "Question does not exists.");
         _;
     }
 
@@ -74,47 +72,39 @@ contract Voting {
 
     // Functions
     function addQuestion(
+        uint256 _qid,
         uint256 _qcategory,
         string memory _qStatement,
+        uint256 _optionCount,
         string memory _option1,
         string memory _option2,
         string memory _option3,
         string memory _option4,
         string memory _option5
     ) external onlyOwner {
+        require(mapQuestions[_qid].questionId == 0, "Question already exists.");
         require(
             _qcategory > 0 && _qcategory <= N_QUESTION_CATEGORIES,
             "Invalid question category."
         );
-
         require(bytes(_qStatement).length != 0, "Invalid question statement.");
-        require(bytes(_option1).length != 0, "Invalid option 1.");
-        require(bytes(_option2).length != 0, "Invalid option 2.");
+        require(
+            _optionCount >= 2 && _optionCount <= 5,
+            "Option count should be between 2 & 5, both inclusive."
+        );
 
-        Question storage quest = mapQuestions[++totalQuestions];
-        quest.questionId = totalQuestions;
+        Question storage quest = mapQuestions[_qid];
+        quest.questionId = _qid;
         quest.status = Status.New;
-
-        optionIdCounter = 2;
-
-        if (bytes(_option3).length > 1) {
-            optionIdCounter++;
-            if (bytes(_option4).length > 1) {
-                optionIdCounter++;
-                if (bytes(_option5).length > 1) {
-                    optionIdCounter++;
-                }
-            }
-        }
-
-        quest.optionCount = optionIdCounter;
+        quest.optionCount = _optionCount;
+        totalQuestions++;
 
         emit EQuestion(
-            totalQuestions,
+            _qid,
             _qcategory,
             uint256(Status.New),
             _qStatement,
-            optionIdCounter,
+            _optionCount,
             _option1,
             _option2,
             _option3,
@@ -152,11 +142,11 @@ contract Voting {
         validQuestion(_qid)
         inStatus(_qid, Status.Open)
     {
+        require(mapUserVotes[msg.sender][_qid] == false, "User already voted.");
         require(
             _optionId > 0 && _optionId <= mapQuestions[_qid].optionCount,
             "Invalid option choosen."
         );
-        require(mapUserVotes[msg.sender][_qid] == false, "User already voted.");
 
         mapUserVotes[msg.sender][_qid] = true;
         totalVotes++;
