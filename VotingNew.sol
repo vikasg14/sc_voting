@@ -5,8 +5,15 @@ pragma solidity ^0.8.0;
 contract Voting {
     struct Question {
         uint256 questionId;
-        Status status;
+        string questionStatement;
+        uint256 questionCategory;
         uint256 optionCount;
+        string option1;
+        string option2;
+        string option3;
+        string option4;
+        string option5;
+        Status status;
     }
 
     enum Status {
@@ -54,6 +61,7 @@ contract Voting {
 
     // Events
     event EQuestion(
+        address userAddress,
         uint256 questionId,
         uint256 questionCategory,
         uint256 questionStatusId,
@@ -66,7 +74,11 @@ contract Voting {
         string option5
     );
 
-    event EQuestionStatus(uint256 questionId, uint256 questionStatusId);
+    event EQuestionStatus(
+        address userAddress,
+        uint256 questionId,
+        uint256 questionStatusId
+    );
 
     event EUserVote(address userAddress, uint256 questionId, uint256 optionId);
 
@@ -95,11 +107,19 @@ contract Voting {
 
         Question storage quest = mapQuestions[_qid];
         quest.questionId = _qid;
-        quest.status = Status.New;
+        quest.questionCategory = _qcategory;
+        quest.questionStatement = _qStatement;
         quest.optionCount = _optionCount;
+        quest.option1 = _option1;
+        quest.option2 = _option2;
+        quest.option3 = _option3;
+        quest.option4 = _option4;
+        quest.option5 = _option5;
+        quest.status = Status.New;
         totalQuestions++;
 
         emit EQuestion(
+            msg.sender,
             _qid,
             _qcategory,
             uint256(Status.New),
@@ -124,7 +144,7 @@ contract Voting {
             "Invalid question status."
         );
         mapQuestions[_qid].status = Status.Open;
-        emit EQuestionStatus(_qid, uint256(Status.Open));
+        emit EQuestionStatus(msg.sender, _qid, uint256(Status.Open));
     }
 
     function disableQuestion(uint256 _qid)
@@ -134,7 +154,7 @@ contract Voting {
         inStatus(_qid, Status.Open)
     {
         mapQuestions[_qid].status = Status.Closed;
-        emit EQuestionStatus(_qid, uint256(Status.Closed));
+        emit EQuestionStatus(msg.sender, _qid, uint256(Status.Closed));
     }
 
     function vote(uint256 _qid, uint256 _optionId)
