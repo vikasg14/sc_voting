@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.11;
 
 contract Voting {
     struct Question {
@@ -30,6 +30,7 @@ contract Voting {
     address public owner;
 
     mapping(uint256 => Question) public mapQuestions; // map(questionId => Question)
+    mapping(address => bool) public mapUsers; // map(address => exists)
     mapping(address => mapping(uint256 => bool)) public mapUserVotes; // map(address => map(questionId => voted))
 
     // Constructor
@@ -170,6 +171,11 @@ contract Voting {
 
         mapUserVotes[msg.sender][_qid] = true;
         totalVotes++;
+
+        if (mapUsers[msg.sender] == false) {
+            mapUsers[msg.sender] = true;
+            totalVoters++;
+        }
 
         emit EUserVote(msg.sender, _qid, _optionId);
     }
